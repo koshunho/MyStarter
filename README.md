@@ -1,15 +1,14 @@
 ## SpringBoot笔记
-
 * [SpringBoot笔记](#springboot笔记)
-		* [自动装配再深入](#自动装配再深入)
-		* [自己做一个starter](#自己做一个starter)
-		* [MVC自动配置原理](#mvc自动配置原理)
-		* [ContentNegotiatingViewResolver 内容协商视图解析器](#contentnegotiatingviewresolver-内容协商视图解析器)
-		* [修改SpringBoot的默认配置](#修改springboot的默认配置)
-		* [注意点](#注意点)
-			* [@PropertySource](#propertysource)
-			* [多环境切换](#多环境切换)
-			* [Thymeleaf遍历](#thymeleaf遍历)
+	* [自动装配再深入](#自动装配再深入)
+	* [自己做一个starter](#自己做一个starter)
+	* [MVC自动配置原理](#mvc自动配置原理)
+	* [ContentNegotiatingViewResolver 内容协商视图解析器](#contentnegotiatingviewresolver-内容协商视图解析器)
+	* [修改SpringBoot的默认配置](#修改springboot的默认配置)
+	* [注意点](#注意点)
+		* [@PropertySource](#propertysource)
+		* [多环境切换](#多环境切换)
+		* [Thymeleaf遍历](#thymeleaf遍历)
 
 
 #### 自动装配再深入
