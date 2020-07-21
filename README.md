@@ -1,15 +1,18 @@
 ## SpringBoot笔记
-
 * [SpringBoot笔记](#springboot笔记)
-		* [自动装配再深入](#自动装配再深入)
-		* [自己做一个starter](#自己做一个starter)
-		* [MVC自动配置原理](#mvc自动配置原理)
-		* [ContentNegotiatingViewResolver 内容协商视图解析器](#contentnegotiatingviewresolver-内容协商视图解析器)
-		* [修改SpringBoot的默认配置](#修改springboot的默认配置)
-		* [注意点](#注意点)
-			* [@PropertySource](#propertysource)
-			* [多环境切换](#多环境切换)
-			* [Thymeleaf遍历](#thymeleaf遍历)
+	* [自动装配再深入](#自动装配再深入)
+	* [自己做一个starter](#自己做一个starter)
+	* [MVC自动配置原理](#mvc自动配置原理)
+	* [ContentNegotiatingViewResolver 内容协商视图解析器](#contentnegotiatingviewresolver-内容协商视图解析器)
+	* [修改SpringBoot的默认配置](#修改springboot的默认配置)
+	* [注意点](#注意点)
+		* [@PropertySource](#propertysource)
+		* [多环境切换](#多环境切换)
+		* [Thymeleaf遍历](#thymeleaf遍历)
+		* [整合JDBC](#整合jdbc)
+		* [Servlet](#servlet)
+		* [Mybatis](#mybatis)
+		* [Shiro](#shiro)
 
 
 #### 自动装配再深入
@@ -32,8 +35,8 @@
 注意selectImports方法
 ```java
 // AutoConfigurationImportSelector （位于package - org.springframework.boot.autoconfigure， 所以是SpringBoot自带的）
-	@Override
-	public String[] selectImports(AnnotationMetadata annotationMetadata) {
+@Override
+public String[] selectImports(AnnotationMetadata annotationMetadata) {
 		if (!isEnabled(annotationMetadata)) {
 			return NO_IMPORTS;
 		}
@@ -43,7 +46,7 @@
 ```
 里面调用了getAutoConfigurationEntry方法
 ```java
-	protected AutoConfigurationEntry getAutoConfigurationEntry(AnnotationMetadata annotationMetadata) {
+protected AutoConfigurationEntry getAutoConfigurationEntry(AnnotationMetadata annotationMetadata) {
 		if (!isEnabled(annotationMetadata)) {
 			return EMPTY_ENTRY;
 		}
@@ -66,7 +69,7 @@
 
 进入getCandidateConfigurations方法
 ```java
-	protected List<String> getCandidateConfigurations(AnnotationMetadata metadata, AnnotationAttributes attributes) {
+protected List<String> getCandidateConfigurations(AnnotationMetadata metadata, AnnotationAttributes attributes) {
 	        // 获取所有通过META-INF/spring.factories配置的, 此时还不会进行过滤和筛选
 			//key 为:org.springframework.boot.autoconfigure.EnableAutoConfiguration的配置的value(类路径+类名称)
 		List<String> configurations = SpringFactoriesLoader.loadFactoryNames(getSpringFactoriesLoaderFactoryClass(),
@@ -77,7 +80,7 @@
 	}
 	
 	// 这里返回的就是EnableAutoConfiguration.class
-	protected Class<?> getSpringFactoriesLoaderFactoryClass() {
+protected Class<?> getSpringFactoriesLoaderFactoryClass() {
 		return EnableAutoConfiguration.class;
 	}
 ```
@@ -86,7 +89,7 @@
 
 进入loadFactoryNames方法
 ```java
-	public static List<String> loadFactoryNames(Class<?> factoryType, @Nullable ClassLoader classLoader) {
+public static List<String> loadFactoryNames(Class<?> factoryType, @Nullable ClassLoader classLoader) {
 	    //此时为org.springframework.boot.autoconfigure.EnableAutoConfiguration。Class.getName()返回类的全限定名
 		String factoryTypeName = factoryType.getName();
 		return loadSpringFactories(classLoader).getOrDefault(factoryTypeName, Collections.emptyList());
@@ -558,4 +561,531 @@ public class ControllerTest {
 </h4>
 </body>
 </html>
+```
+
+##### 国际化
+怎么写配置文件就不说了
+
+1. 怎么在页面获取国际化的值？
+   查看Thymeleaf文档，可以看到message的取值为：#{...}
+![#{...}](http://qcorkht4q.bkt.clouddn.com/blog1594925284255.png)
+
+2. 根据按照自动切换中英文
+
+	Spirng中有一个**Locale对象**和一个**LocaleResolver解析器**。如果我们想要我们的国际化资源生效，就需要让我们自己的Locale生效。
+	
+	那我们自己写一个自己的LocaleResolver，并在链接上携带地区信息。
+```java
+@Bean
+@ConditionalOnMissingBean
+@ConditionalOnProperty(prefix = "spring.mvc", name = "locale")
+public LocaleResolver localeResolver() {
+        // 容器中没有就自己配，有的话就用用户配置的
+		if (this.mvcProperties.getLocaleResolver() == WebMvcProperties.LocaleResolver.FIXED) {
+			return new FixedLocaleResolver(this.mvcProperties.getLocale());
+		}
+		AcceptHeaderLocaleResolver localeResolver = new AcceptHeaderLocaleResolver();
+		localeResolver.setDefaultLocale(this.mvcProperties.getLocale());
+		return localeResolver;
+		}
+   ```
+AcceptHeaderLocaleResolver有这样一个方法 --> **解析Locale**，我们也要重写这个方法来解析Locale
+```java
+@Override
+public Locale resolveLocale(HttpServletRequest request) {
+		Locale defaultLocale = getDefaultLocale();
+		// 根据请求头带来的区域信息获取Locale进行国际化
+		if (defaultLocale != null && request.getHeader("Accept-Language") == null) {
+			return defaultLocale;
+		}
+		Locale requestLocale = request.getLocale();
+		List<Locale> supportedLocales = getSupportedLocales();
+		if (supportedLocales.isEmpty() || supportedLocales.contains(requestLocale)) {
+			return requestLocale;
+		}
+		Locale supportedLocale = findSupportedLocale(request, supportedLocales);
+		if (supportedLocale != null) {
+			return supportedLocale;
+		}
+		return (defaultLocale != null ? defaultLocale : requestLocale);
+	}
+```
+---
+我们修改一下前端页面，附带地区信息。之前都是注意/index.html?language=xx&&a=1 这样的形式，而thymeleaf的语法，用`()`传参
+```html
+			<a class="btn btn-sm" th:href="@{/index.html(language='zh_CN')}">中文</a>
+			<a class="btn btn-sm" th:href="@{/index.html(language='en_US')}">English</a>
+```
+
+自己写一个组件类，我们**重写resolveLocale方法解析Locale**
+```java
+public class MyLocaleResolver implements LocaleResolver {
+
+    //解析请求
+    @Override
+    public Locale resolveLocale(HttpServletRequest request) {
+        String language = request.getParameter("language");
+
+        Locale locale = Locale.getDefault();  //如果没有就使用默认的
+
+        //如果请求的链接携带了国际化的参数
+        if(!StringUtils.isEmpty(language)){
+            String[] split = language.split("_");
+            locale = new Locale(split[0],split[1]);
+        }
+        return locale;
+    }
+
+    @Override
+    public void setLocale(HttpServletRequest request, HttpServletResponse response, Locale locale) {
+
+    }
+}
+```
+
+为了让MyLocaleResolver生效，我们要配置类中把它注入容器
+```java
+    //必须把自定义的组件放在配置类@bean，自定义的国际化组件才生效
+    @Bean
+    public LocaleResolver localeResolver(){
+        return new MyLocaleResolver();
+    }
+```
+
+##### 拦截器
+
+解决不用登陆也可以直接访问到后台主页
+
+1.登陆时，把登录信息放进session
+```java
+    @RequestMapping("/user/login")
+    public String login(@RequestParam("Username") String username,
+                        @RequestParam("Password") String pwd,
+                        Model model, HttpSession session){
+        if(!StringUtils.isEmpty(username) && pwd.equals("123")){
+            session.setAttribute("loginUser",username);
+            return "dashboard";
+        }else{
+            model.addAttribute("loginMsg","用户名or密码错误！");
+            return "index";
+        }
+    }
+	
+	@RequestMapping("/user/logout")
+    public String logout(HttpSession session){
+        session.invalidate();
+        return "redirect:/index.html";
+    }
+```
+2. 定义一个拦截器实现HandlerInterceptor接口，只需要重写preHandle方法
+```java
+public class LoginHandlerInterceptor implements HandlerInterceptor {
+    @Override
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+        Object loginUser = request.getSession().getAttribute("loginUser");
+        if(loginUser == null){
+            request.setAttribute("loginMsg","没有权限");
+            request.getRequestDispatcher("test.html").forward(request,response);
+            return false;
+        }else{
+            return true;
+        }
+    }
+}
+```
+	
+　　试图从session中获取登陆信息，如果为空，就返回false，不放行
+
+3. 然后把拦截器注册到实现WebMvcConfiguer的配置类中
+```java
+@Configuration
+public class MyConfig implements WebMvcConfigurer {
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(new LoginHandlerInterceptor()).
+                addPathPatterns("/**").
+                excludePathPatterns("/t1","/","login");
+    }
+}
+```
+　　需要调用excludePathPatterns，指定哪些请求不该拦截（登录、静态志愿、首页..）
+  
+  4. 在主页可以获取用户登录的信息
+ ```html
+	 [[${session.loginUser}]]
+ ```
+ 
+ ##### Thymeleaf 公共页面抽取
+ 
+ 步骤：
+ 1. 抽取公共片段th:fragment 定义模板名
+ 2. 引入公共片段th:insert插入模板名
+ 3. 如果要传递参数，可以直接使用()传参，接收判断即可
+    
+单独建一个**common.html**，我们将头部nav标签抽取定义为一个模板
+  ```html
+  <!--头部导航栏-->
+<nav class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0" th:fragment="topbar">
+    <a class="navbar-brand col-sm-3 col-md-2 mr-0" href="">[[${session.loginUser}]]</a>
+    <input class="form-control form-control-dark w-100" type="text" placeholder="Search" aria-label="Search">
+    <ul class="navbar-nav px-3">
+        <li class="nav-item text-nowrap">
+            <a class="nav-link" th:href="@{/user/logout}">注销</a>
+        </li>
+    </ul>
+</nav>
+  ```
+
+然后我们在别的页面中引入，删掉原来的nav
+```html
+<!--头部导航栏-->
+<div th:replace="~{commons/commons::topbar}"></div>
+```
+
+语法：`th:insert=~{模板::标签名}`
+
+p.s.可以使用th:insert, th:replace, th:include
+
+ ##### 整合JDBC
+1. 导入依赖
+```xml
+ <dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-jdbc</artifactId>
+</dependency>
+<dependency>
+    <groupId>mysql</groupId>
+    <artifactId>mysql-connector-java</artifactId>
+    <scope>runtime</scope>
+</dependency>
+ ```
+ 2. 编写yaml连接数据库
+```yaml
+spring:
+  datasource:
+    username: root
+    password: 123456
+    url: jdbc:mysql://localhost:3306/springboot?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8
+    driver-class-name: com.mysql.cj.jdbc.Driver
+```
+ 
+3. **配置完这一些东西后，我们就可以直接去使用了，因为SpringBoot已经默认帮我们进行了自动配置**
+   
+   直接获得数据源，获得连接
+```java
+@SpringBootTest
+class SpringboottestApplicationTests {
+
+    @Autowired
+    DataSource dataSource;
+
+    @Test
+    void contextLoads() throws SQLException {
+        System.out.println(dataSource.getClass());
+
+        Connection connection = dataSource.getConnection();
+        Statement statement = connection.createStatement();
+        ResultSet resultSet = statement.executeQuery("select * from springboot.employee");
+        while(resultSet.next()){
+            System.out.println(resultSet.getString("lastName"));
+        }
+        resultSet.close();
+        statement.close();
+        connection.close();
+
+    }
+
+}
+```
+
+有了数据库连接，**就可以** CRUD 操作数据库了。但是SpringBoot帮我们封装好了一个对象JdbcTemplate
+![JdbcTemplateConfiguration](http://qcorkht4q.bkt.clouddn.com/blog1594994695152.png)
+
+可以看到这个bean只需要注入一个dataSource和JdpcProperties就可以了，dataSource已经由SpringBoot搞定了，JdpcProperties我们自己配置了。就可以直接在容器中获取到这个bean了。
+
+- 有了数据源(com.zaxxer.hikari.HikariDataSource)，然后可以拿到数据库连接(java.sql.Connection)，有了连接，就可以使用原生的 JDBC 语句来操作数据库；
+
+- 即使不使用第三方数据库操作框架，如 MyBatis等，Spring 本身也**对原生的JDBC 做了轻量级的封装**，即JdbcTemplate。
+
+- 数据库操作的所有 CRUD 方法都在 JdbcTemplate 中。
+
+- Spring Boot 不仅提供了默认的数据源，同时默认已经配置好了 JdbcTemplate 放在了容器中，程序员只需自己注入即可使用
+  
+ ```java
+@RestController
+public class JDBCController {
+    @Autowired
+    JdbcTemplate jdbcTemplate;
+
+    //查询数据库的所有信息
+    //没有实体类，用Map来获取信息 Map<字段名，信息>
+    @GetMapping("/userList")
+    public List<Map<String,Object>> userList(){
+        String sql = "select * from springboot.employee";
+        List<Map<String, Object>> maps = jdbcTemplate.queryForList(sql);
+        return maps;
+    }
+	
+	 //修改用户信息
+    @GetMapping("/update/{id}")
+    public String updateUser(@PathVariable("id") int id){
+        //插入语句
+        String sql = "update springboot.employee set lastName=?,email=? where id="+id;
+        //数据
+        Object[] objects = new Object[2];
+        objects[0] = "大天狗";
+        objects[1] = "123@qq.com";
+        jdbcTemplate.update(sql,objects);
+        //查询
+        return "OK";
+    }
+}  
+ ```
+ 
+ 注意上面的updateUser方法 用`?`占位的方式
+ 
+  ##### Servlet
+一般Web开发使用 Controller 基本上可以完成大部分需求，但是有的时候我们还是会用到 Servlet。
+
+内置 Servlet 容器时没有web.xml文件，所以使用 Spring Boot 的注册 Servlet 方式 `ServletRegistrationBean`
+
+1. 写一个Servlet
+```java
+public class TestServlet extends HttpServlet {
+    @Override
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        doPost(req,resp);
+    }
+
+    @Override
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        resp.getWriter().print("<h1>I am TestServlet</h1>");
+    }
+}
+```
+　　一般来说我们是用不到doGet方法的，doGet方法提交表单的时候会在url后边显示提交的内容，所以不安全。
+  
+  而且doGet方法只能提交256个字符(1024字节)，而doPost没有限制，因为get方式数据的传输载体是URL（提交方式能form，也能任意的URL链接），而POST是HTTP头键值对（只能以form方式提交）。
+通常我们使用的都是doPost方法，你只要在servlet中让这两个方法互相调用就行了。
+
+servlet碰到doGet方法调用直接就会去调用doPost因为他们的参数都一样。而且doGet方法处理中文问题很困难，要写过滤器之类的。
+
+2. 再通过ServletRegistrationBean注册
+```java
+@Configuration
+public class Config {
+    @Bean
+    public ServletRegistrationBean testServletRegistration(){
+        ServletRegistrationBean<TestServlet> bean = new ServletRegistrationBean<>(new TestServlet());
+        bean.addUrlMappings("/testServlet");
+        return bean;
+    }
+}
+```
+![TestServlet](http://qcorkht4q.bkt.clouddn.com/blog1595001518470.png)
+
+Druid数据源监控就是提供了一个 web 界面方便用户查看。采用了ServletRegistrationBean配置 Druid 监控管理后台的Servlet。[配置_StatViewServlet配置](https://github.com/alibaba/druid/wiki/%E9%85%8D%E7%BD%AE_StatViewServlet%E9%85%8D%E7%BD%AE)
+
+##### Mybatis
+
+1. 引入相关依赖
+   
+   注意，这不是Spring官方的
+```xml
+        <dependency>
+            <groupId>org.mybatis.spring.boot</groupId>
+            <artifactId>mybatis-spring-boot-starter</artifactId>
+            <version>2.1.1</version>
+        </dependency>
+```
+2. 创建mapper目录和对应的Mapper接口
+```java
+@Mapper
+@Repository
+public interface DepartmentMapper {
+    List<Department> selectAllDepartment();
+
+    Department selectDepartmentById(@Param("id") int id);
+}
+```
+添加了@Mapper注解之后这个接口在编译时会生成相应的实现类，也就是使用了动态代理！
+
+当映射器方法需要多个参数时，@Param可以被用于给映射器方法中的每个参数来取一个名字。否则，多参数将会以它们的**顺序位置和SQL语句中的表达式进行映射**，这是默认的。
+
+若使用@Param(“id”)，则SQL中参数应该被命名为：#{id}。
+[Mybatis传递多个参数的4种方式](https://mp.weixin.qq.com/s?__biz=MzI3ODcxMzQzMw==&mid=2247485137&idx=1&sn=8b6fa49dccc01b040c24749375e88a4f&chksm=eb5383e7dc240af15943519938f33da919436464b3182a70fec0ed3196a8761bf85594c6c0e6&scene=21#wechat_redirect)
+
+
+2. 对应的Mapper.xml文件
+
+    **注意namespace**
+```xml
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.huang.mapper.DepartmentMapper">
+    <select id="selectAllDepartment" resultType="department">
+        SELECT * FROM springboot.department
+    </select>
+
+    <select id="selectDepartmentById" resultType="department">
+        select *
+        from springboot.department
+        where id = #{id};
+    </select>
+</mapper>
+```
+
+3. 配置别名和接口扫描
+```yaml
+mybatis:
+  type-aliases-package: com.huang.pojo
+  mapper-locations: classpath:mapper/*.xml
+```
+##### Shiro
+![Shiro](http://qcorkht4q.bkt.clouddn.com/blogshiro.png)
+
+1. 设置Realm
+```java
+public class UserRealm extends AuthorizingRealm {
+
+    @Autowired
+    UserService userService;
+
+    //授权
+    @Override
+    protected AuthorizationInfo doGetAuthorizationInfo(PrincipalCollection principals) {
+
+        SimpleAuthorizationInfo info = new SimpleAuthorizationInfo();
+
+        //拿到当前登录的对象
+        Subject subject = SecurityUtils.getSubject();
+
+        //这里就是从AuthenticationInfo取到当前的对象principal
+        // 因为把user作为第一个参数传递过来了
+        User currentUser = (User) subject.getPrincipal(); //拿到user对象
+
+        //设置当前用户的权限
+        HashSet<String> set = new HashSet<>();
+        set.add(currentUser.getRole());
+        info.setRoles(set);
+
+        //return info
+        return info;
+    }
+
+    //认证
+    @Override
+    protected AuthenticationInfo doGetAuthenticationInfo(AuthenticationToken token) throws AuthenticationException {
+        System.out.println("执行了认证方法");
+
+        //这些类是有联系的，controller里面封装了token，就是一个全局的，都可以调得到
+        UsernamePasswordToken userToken = (UsernamePasswordToken) token;
+
+        //在执行登录的时候，就会走到这个方法
+        //用户名 密码 从数据库中取
+        User user = userService.queryUserByName(userToken.getUsername());
+
+        if(user == null){
+            // 抛出异常 UnknownAccountException
+            return null;
+        }
+
+        Object principal = user;
+
+        Object credentials = user.getPassword();
+
+        ByteSource salt = ByteSource.Util.bytes(user.getUsername());
+
+        String realmName = getName();
+
+        //密码认证，shiro做
+        return new SimpleAuthenticationInfo(principal,credentials,salt,realmName);
+    }
+}
+```
+
+2. 设置ShiroConfig
+
+    **HashedCredentialsMatcher** -> **Realm** -> **DefaultWebSecurityManager** -> **ShiroFilterFactoryBean**
+```java
+@Configuration
+public class ShiroConfig {
+    //ShiroFilterFactoryBean
+    @Bean
+    public ShiroFilterFactoryBean shiroFilterFactoryBean(@Qualifier("defaultWebSecurityManager") DefaultWebSecurityManager defaultWebSecurityManager){
+        ShiroFilterFactoryBean bean = new ShiroFilterFactoryBean();
+
+        bean.setSecurityManager(defaultWebSecurityManager);
+
+        //添加shiro的内置过滤器
+        /*anon:无须认证就可以访问
+        * authc：必须认证了才能访问
+        * user：必须拥有 记住我 功能才能使用
+        * perms：拥有对某个资源的权限才能访问
+        * role：拥有某个角色权限才能访问*/
+        LinkedHashMap<String, String> filterMap = new LinkedHashMap<>();
+
+        filterMap.put("/","anon");
+        filterMap.put("/index","anon");
+        filterMap.put("/login","anon");
+        filterMap.put("/toLogin","anon");
+        filterMap.put("/toRegister","anon");
+        filterMap.put("/doRegister","anon");
+
+
+        filterMap.put("/user/add","roles[admin]");
+        filterMap.put("/user/update","roles[user]");
+
+        filterMap.put("/logout","logout");
+
+        filterMap.put("/**","authc");
+
+        bean.setFilterChainDefinitionMap(filterMap);
+
+        //设置登录的请求
+        bean.setLoginUrl("/toLogin");
+
+        bean.setUnauthorizedUrl("/notRole");
+
+        return bean;
+    }
+
+    //DefaultWebSecurityManager
+    @Bean
+    public DefaultWebSecurityManager defaultWebSecurityManager(@Qualifier("userRealm") UserRealm userRealm){
+        DefaultWebSecurityManager securityManager = new DefaultWebSecurityManager();
+
+        securityManager.setRealm(userRealm);
+
+        return securityManager;
+    }
+
+    //创建realm对象，需要自定义类
+    @Bean
+    public UserRealm userRealm(@Qualifier("hashedCredentialsMatcher") HashedCredentialsMatcher matcher){
+        UserRealm userRealm = new UserRealm();
+
+        userRealm.setAuthorizationCachingEnabled(false);
+
+        userRealm.setCredentialsMatcher(matcher);
+
+        return userRealm;
+    }
+
+    //密码匹配凭证管理器
+    @Bean
+    public HashedCredentialsMatcher hashedCredentialsMatcher() {
+        HashedCredentialsMatcher hashedCredentialsMatcher = new HashedCredentialsMatcher();
+        // 采用MD5方式加密
+        hashedCredentialsMatcher.setHashAlgorithmName("MD5");
+        // 设置加密次数
+        hashedCredentialsMatcher.setHashIterations(1024);
+
+        hashedCredentialsMatcher.setStoredCredentialsHexEncoded(true);
+
+        return hashedCredentialsMatcher;
+    }
+}
 ```
