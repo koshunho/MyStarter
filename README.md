@@ -19,14 +19,17 @@
 ![程序入口](http://qcorkht4q.bkt.clouddn.com/blog1594816832871.png)
 
 进入@SpringBootApplication
+
 ![SpringBootApplication](http://qcorkht4q.bkt.clouddn.com/blog1594816927900.png)
 
 进入@EnableAutoConfiguration
 
 @EnableAutoConfiguration 注解会导入AutoConfigurationImportSelector类的实例被引入到Spring容器中
+
 ![EnableAutoConfiguration](http://qcorkht4q.bkt.clouddn.com/blog1594816986262.png)
 
 进入AutoConfigurationImportSelector.class
+
 ![AutoConfigurationImportSelector](http://qcorkht4q.bkt.clouddn.com/blog1594817044704.png)
 
 ---
@@ -291,6 +294,7 @@ public class TestController {
 
 ```
 ![test](http://qcorkht4q.bkt.clouddn.com/blog1594825803479.png)
+
 修改application.properties
 ```xml
 my-starter.name = fuckyou
@@ -395,6 +399,11 @@ protected void initServletContext(ServletContext servletContext) {
 		...
 }
 ```
+注意`BeanFactoryUtils`这个类！[BeanFactoryUtils](https://www.jianshu.com/p/3fe1c19c96ca)
+
+beansOfTypeIncludingAncestors方法是获取包含祖先在内的特定类型的bean实例map（key为bean名称，value为bean实例），同时指定是否包含单例，以及是否允许预初始化。
+
+简而言之`BeanFactoryUtils`这个类封装了很多对bean工厂中操作的方法，当然也就可以获取包含祖先在内的特定类型的bean实例。
 
 所以解析视图的流程（也就是`resolveViewName方法`）：从BeanFacotory中所有的视图解析器，封装成一个属性`List<ViewResolver> viewResolvers` --> 调用`getCandidateViews`方法，遍历所有的视图解析器以获取候选的视图对象 --> 调用 `getBestView`方法，返回一个最合适的视图对象。
 
@@ -441,7 +450,9 @@ SpringBoot在自动配置很多组件的时候，先看容器中有没有用户�
 再次注意官方文档说的这句话，要想扩展MVC的功能，就实现WebMvcConfigurer接口并加上@Configuration
 
 **@Configuration标注在类上，相当于把该类作为spring的xml配置文件中的`<beans>`，作用为：配置spring容器(应用上下文)**
+
 ![@Configuration](http://qcorkht4q.bkt.clouddn.com/blog1594919421087.png)
+
 **@Configuration注解本身定义时被@Component标注了，因此本质上来说@Configuration也是一个@Component**
 
 ![WebMvcConfigurationAdapter](http://qcorkht4q.bkt.clouddn.com/blog1594917681994.png)
@@ -450,6 +461,7 @@ WebMvcAutoConfiguration中有一个类WebMvcConfigurationAdapter，这个类上�
 `
 
 点进EnableWebMvcConfiguration这个类看一下，它继承了一个父类DelegatingWebMvcConfiguration
+
 ![EnableWebMvcConfiguration](http://qcorkht4q.bkt.clouddn.com/blog1594917857989.png)
 
 父类中有这样一段代码
@@ -865,10 +877,10 @@ public class TestServlet extends HttpServlet {
 ```
 　　一般来说我们是用不到doGet方法的，doGet方法提交表单的时候会在url后边显示提交的内容，所以不安全。
   
-  而且doGet方法只能提交256个字符(1024字节)，而doPost没有限制，因为get方式数据的传输载体是URL（提交方式能form，也能任意的URL链接），而POST是HTTP头键值对（只能以form方式提交）。
+   而且doGet方法只能提交256个字符(1024字节)，而doPost没有限制，因为get方式数据的传输载体是URL（提交方式能form，也能任意的URL链接），而POST是HTTP头键值对（只能以form方式提交）。
 通常我们使用的都是doPost方法，你只要在servlet中让这两个方法互相调用就行了。
 
-servlet碰到doGet方法调用直接就会去调用doPost因为他们的参数都一样。而且doGet方法处理中文问题很困难，要写过滤器之类的。
+   servlet碰到doGet方法调用直接就会去调用doPost因为他们的参数都一样。而且doGet方法处理中文问题很困难，要写过滤器之类的。
 
 2. 再通过ServletRegistrationBean注册
 ```java
