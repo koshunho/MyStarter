@@ -16,21 +16,21 @@
 
 
 #### 自动装配再深入
-![程序入口](http://qcorkht4q.bkt.clouddn.com/blog1594816832871.png)
+![程序入口](https://raw.githubusercontent.com/koshunho/koshunhopic/master/blog1594816832871.png)
 
 进入@SpringBootApplication
 
-![SpringBootApplication](http://qcorkht4q.bkt.clouddn.com/blog1594816927900.png)
+![SpringBootApplication](https://raw.githubusercontent.com/koshunho/koshunhopic/master/blog1594816927900.png)
 
 进入@EnableAutoConfiguration
 
 @EnableAutoConfiguration 注解会导入AutoConfigurationImportSelector类的实例被引入到Spring容器中
 
-![EnableAutoConfiguration](http://qcorkht4q.bkt.clouddn.com/blog1594816986262.png)
+![EnableAutoConfiguration](https://raw.githubusercontent.com/koshunho/koshunhopic/master/blog1594816986262.png)
 
 进入AutoConfigurationImportSelector.class
 
-![AutoConfigurationImportSelector](http://qcorkht4q.bkt.clouddn.com/blog1594817044704.png)
+![AutoConfigurationImportSelector](https://raw.githubusercontent.com/koshunho/koshunhopic/master/blog1594817044704.png)
 
 ---
 **AutoConfigurationImportSelector**
@@ -137,7 +137,7 @@ loadFactoryNames 方法调用 loadSpringFactories 方法，这个方法去加载
 
 **看上面的源码可知通过SpringFactoriesLoader.loadFactoryNames()把多个jar的/META-INF/spring.factories配置文件中的有EnableAutoConfiguration配置项都抓出来。**
 
-![spring.factories](http://qcorkht4q.bkt.clouddn.com/blog1594818106021.png)
+![spring.factories](https://raw.githubusercontent.com/koshunho/koshunhopic/master/blog1594818106021.png)
 
 所以@EnableAutoConfiguration的大致原理就是从classpath中搜寻所有的META-INF/spring.factories配置文件，并将其中org.springframework.boot.autoconfigure.EnableutoConfiguration对应的配置项通过反射实例化为对应的标注了@Configuration的JavaConfig形式的IoC容器配置类，然后汇总为一个并加载到IoC容器。
 
@@ -293,14 +293,14 @@ public class TestController {
 }
 
 ```
-![test](http://qcorkht4q.bkt.clouddn.com/blog1594825803479.png)
+![test](https://raw.githubusercontent.com/koshunho/koshunhopic/master/blog1594825803479.png)
 
 修改application.properties
 ```xml
 my-starter.name = fuckyou
 my-starter.projectName = xixi
 ```
-![test](http://qcorkht4q.bkt.clouddn.com/blog1594825855647.png)
+![test](https://raw.githubusercontent.com/koshunho/koshunhopic/master/blog1594825855647.png)
 
 
 #### MVC自动配置原理
@@ -433,7 +433,7 @@ public class MyConfig {
    
 3. 访问http://localhost:8080/看结果
 
-![自定义视图解析器](http://qcorkht4q.bkt.clouddn.com/blog1594908789205.png)
+![自定义视图解析器](https://raw.githubusercontent.com/koshunho/koshunhopic/master/blog1594908789205.png)
 
 可以看到我们自定义的视图解析器就在这了。
 
@@ -451,18 +451,18 @@ SpringBoot在自动配置很多组件的时候，先看容器中有没有用户�
 
 **@Configuration标注在类上，相当于把该类作为spring的xml配置文件中的`<beans>`，作用为：配置spring容器(应用上下文)**
 
-![@Configuration](http://qcorkht4q.bkt.clouddn.com/blog1594919421087.png)
+![@Configuration](https://raw.githubusercontent.com/koshunho/koshunhopic/master/blog1594919421087.png)
 
 **@Configuration注解本身定义时被@Component标注了，因此本质上来说@Configuration也是一个@Component**
 
-![WebMvcConfigurationAdapter](http://qcorkht4q.bkt.clouddn.com/blog1594917681994.png)
+![WebMvcConfigurationAdapter](https://raw.githubusercontent.com/koshunho/koshunhopic/master/blog1594917681994.png)
 
 WebMvcAutoConfiguration中有一个类WebMvcConfigurationAdapter，这个类上有一个注解`@Import({WebMvcAutoConfiguration.EnableWebMvcConfiguration.class})
 `
 
 点进EnableWebMvcConfiguration这个类看一下，它继承了一个父类DelegatingWebMvcConfiguration
 
-![EnableWebMvcConfiguration](http://qcorkht4q.bkt.clouddn.com/blog1594917857989.png)
+![EnableWebMvcConfiguration](https://raw.githubusercontent.com/koshunho/koshunhopic/master/blog1594917857989.png)
 
 父类中有这样一段代码
 ```java
@@ -526,7 +526,8 @@ public class DelegatingWebMvcConfiguration extends WebMvcConfigurationSupport {
 4. `–classpath:/`
 
 使用yml切换环境
-![yml切换环境](http://qcorkht4q.bkt.clouddn.com/blog1594835436803.png)
+
+![yml切换环境](https://raw.githubusercontent.com/koshunho/koshunhopic/master/blog1594835436803.png)
 
 ##### Thymeleaf遍历
 
@@ -580,7 +581,7 @@ public class ControllerTest {
 
 1. 怎么在页面获取国际化的值？
    查看Thymeleaf文档，可以看到message的取值为：#{...}
-![#{...}](http://qcorkht4q.bkt.clouddn.com/blog1594925284255.png)
+![#{...}](https://raw.githubusercontent.com/koshunho/koshunhopic/master/blog1594925284255.png)
 
 2. 根据按照自动切换中英文
 
@@ -811,7 +812,7 @@ class SpringboottestApplicationTests {
 ```
 
 有了数据库连接，**就可以** CRUD 操作数据库了。但是SpringBoot帮我们封装好了一个对象JdbcTemplate
-![JdbcTemplateConfiguration](http://qcorkht4q.bkt.clouddn.com/blog1594994695152.png)
+![JdbcTemplateConfiguration](https://raw.githubusercontent.com/koshunho/koshunhopic/master/blog1594994695152.png)
 
 可以看到这个bean只需要注入一个dataSource和JdpcProperties就可以了，dataSource已经由SpringBoot搞定了，JdpcProperties我们自己配置了。就可以直接在容器中获取到这个bean了。
 
@@ -894,7 +895,7 @@ public class Config {
     }
 }
 ```
-![TestServlet](http://qcorkht4q.bkt.clouddn.com/blog1595001518470.png)
+![TestServlet](https://raw.githubusercontent.com/koshunho/koshunhopic/master/blog1595001518470.png)
 
 Druid数据源监控就是提供了一个 web 界面方便用户查看。采用了ServletRegistrationBean配置 Druid 监控管理后台的Servlet。[配置_StatViewServlet配置](https://github.com/alibaba/druid/wiki/%E9%85%8D%E7%BD%AE_StatViewServlet%E9%85%8D%E7%BD%AE)
 
@@ -956,7 +957,7 @@ mybatis:
   mapper-locations: classpath:mapper/*.xml
 ```
 ##### Shiro
-![Shiro](http://qcorkht4q.bkt.clouddn.com/blogshiro.png)
+![Shiro](https://raw.githubusercontent.com/koshunho/koshunhopic/master/blogshiro.png)
 
 1. 设置Realm
 ```java
@@ -1100,4 +1101,5 @@ public class ShiroConfig {
         return hashedCredentialsMatcher;
     }
 }
+
 ```
